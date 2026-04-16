@@ -6,40 +6,39 @@ app.use(cors());
 app.use(express.json());
 
 let latestMessage = "no message yet";
-let lastUpdateTimestamp = 0; // Stores time in milliseconds
+let lastUpdateTimestamp = 0;
+let lastSenderId = ""; // Stores the ID of the device that sent the message
 
-// health check
 app.get("/", (req, res) => {
   res.json({ status: "server running" });
 });
 
-// send message
 app.post("/message", (req, res) => {
   latestMessage = req.body.message;
-  lastUpdateTimestamp = Date.now(); // Record the exact moment the message arrived
+  lastSenderId = req.body.id; // Save the sender's unique ID
+  lastUpdateTimestamp = Date.now();
   
-  console.log("Received:", latestMessage, "at", new Date(lastUpdateTimestamp).toLocaleTimeString());
+  console.log(`Received from [${lastSenderId}]:`, latestMessage);
 
   res.json({
     success: true,
     stored: latestMessage,
-    timestamp: lastUpdateTimestamp
+    sender_id: lastSenderId
   });
 });
 
-// receive latest message
 app.get("/message", (req, res) => {
-  // Calculate how many seconds have passed since the last update
   const now = Date.now();
   const secondsAgo = lastUpdateTimestamp === 0 ? 999 : Math.floor((now - lastUpdateTimestamp) / 1000);
 
   res.json({
     message: latestMessage,
-    seconds_ago: secondsAgo // This is what your ESP32 code uses to trigger "INCOMING"
+    seconds_ago: secondsAgo,
+    sender_id: lastSenderId // Tell the requester who sent this
   });
 });
 
-const PORT = process.env.PORT || 3000; // Use process.env.PORT for Render compatibility
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
